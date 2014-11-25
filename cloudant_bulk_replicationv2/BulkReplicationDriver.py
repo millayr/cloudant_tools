@@ -58,7 +58,7 @@ options:
                        This should be used when the source and target users
                        are the same.  (Default is to not rename the databases)
 
-   -l [<dbs>]      :   Pass a filename containing a list of databases to
+   -l <filename>   :   Pass a filename containing a list of databases to
                        replicate.  Each database name should be on a separate
                        line.
 
