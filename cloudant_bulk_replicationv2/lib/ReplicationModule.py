@@ -4,7 +4,6 @@
 
 import requests
 import json
-import random
 import logging
 from ExceptionsModule import ReplError
 from ExceptionsModule import FatalError

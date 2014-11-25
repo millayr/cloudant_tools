@@ -4,7 +4,6 @@
 
 import json
 import requests
-import uuid
 import random
 import logging
 from ExceptionsModule import FatalError
