@@ -14,7 +14,7 @@ from ExceptionsModule import FilterError
 s = requests.Session()
 
 # Accepts:  1) A URL to a cloudant account, 
-#			2) the authorization header
+#           2) the authorization header
 # Returns:  An array of all databases slated for replication from account1 to account2
 def get_dbs(url, auth):
 	r = s.get('{0}_all_dbs'.format(url), headers={'Authorization': auth}).json()
@@ -31,12 +31,12 @@ def get_dbs(url, auth):
 
 
 # Accepts:  1) The source URL (both Cloudant account and db),
-#			2) The source authorization header,
-#			3) The target URL (both Cloudant account and db),
-#			4) The target authorization header,
-#			5) The account to be listed in the user_ctx,
-#			6) Additional replication options,
-#			7) Unique id to use with this set of replications
+#           2) The source authorization header,
+#           3) The target URL (both Cloudant account and db),
+#           4) The target authorization header,
+#           5) The account to be listed in the user_ctx,
+#           6) Additional replication options,
+#           7) Unique id to use with this set of replications
 # Returns:  The prepared replication document
 def create_repl_doc(source, source_auth, target, target_auth, mediator, repl_options, batch_id, incremental_id):
 	db = source.split('cloudant.com/')[1]
@@ -76,11 +76,11 @@ def create_repl_doc(source, source_auth, target, target_auth, mediator, repl_opt
 
 
 
-# Accepts:	1) The destination Cloudant account URL,
-#			2) The name of the DB to create,
-#			3) The authorization header for the destination,
-#			4) The new q value for the database
-# Returns:	Void
+# Accepts:  1) The destination Cloudant account URL,
+#           2) The name of the DB to create,
+#           3) The authorization header for the destination,
+#           4) The new q value for the database
+# Returns:  Void
 def create_new_db(url, db, auth, q):
 	r = s.put(url + db + '?q=' + q, headers={'Authorization': auth}).json()
 	if 'error' in r:
@@ -93,10 +93,10 @@ def create_new_db(url, db, auth, q):
 
 
 
-# Accepts:	1) The mediator Cloudant account URL,
-#			2) The replication document to post,
-#			3) The authorization header for the mediator
-# Returns:	Void
+# Accepts:  1) The mediator Cloudant account URL,
+#           2) The replication document to post,
+#           3) The authorization header for the mediator
+# Returns:  Void
 def post_repl_doc(url, doc, auth):
 	source = doc['source']['url']
 
@@ -111,9 +111,9 @@ def post_repl_doc(url, doc, auth):
 
 
 
-# Accepts:	1) The URL for the Cloudant account
-#			2) The authorization header for the account
-# Returns:	Void
+# Accepts:  1) The URL for the Cloudant account
+#           2) The authorization header for the account
+# Returns:  Void
 def create_replicator(url, auth):
 	r = s.put('{0}_replicator'.format(url), headers={'Authorization': auth}).json()
 	if 'error' in r:
@@ -127,11 +127,11 @@ def create_replicator(url, auth):
 
 
 
-# Accepts:	1) The URL for the Cloudant account,
-#			2) The authorization header for the account,
-#			3) The source db that is slated to be replicated,
-#			4) The last batch id used for replications
-# Returns:	The last sequence number to include in the replication doc
+# Accepts:  1) The URL for the Cloudant account,
+#           2) The authorization header for the account,
+#           3) The source db that is slated to be replicated,
+#           4) The last batch id used for replications
+# Returns:  The last sequence number to include in the replication doc
 def get_last_sequence_num(url, auth, source_db, batch_id):
 	# first get the replication id
 	doc_url = '{0}_replicator/cloudant_bulk_replication_{1}_{2}'.format(url, source_db, batch_id)
@@ -162,11 +162,11 @@ def get_last_sequence_num(url, auth, source_db, batch_id):
 
 
 
-# Accepts:	1) The URL for the Cloudant account,
-#			2) The authorization header for the account,
-#			3) The source db that is slated to be replicated,
-#			4) The previous batch ID which did not lead to a sequence number
-# Returns:	The last sequence number for the next most recent batch ID
+# Accepts:  1) The URL for the Cloudant account,
+#           2) The authorization header for the account,
+#           3) The source db that is slated to be replicated,
+#           4) The previous batch ID which did not lead to a sequence number
+# Returns:  The last sequence number for the next most recent batch ID
 def try_other_batch_ids(url, auth, source_db, failed_batch_id):
 	# Query the _replicator for all docs that have the "cloudant_bulk_replication_<source_db>" base.
 	# Set the end key to the replication that resulted in a missing sequence number and disable inclusive_end.

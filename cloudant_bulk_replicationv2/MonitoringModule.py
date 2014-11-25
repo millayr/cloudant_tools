@@ -13,9 +13,9 @@ s = requests.Session()
 
 
 
-# Accepts:	1) The base URL to the mediator account,
-#			2) The authorization for the mediator
-# Returns:	The URL to the newly created view
+# Accepts:  1) The base URL to the mediator account,
+#           2) The authorization for the mediator
+# Returns:  The URL to the newly created view
 def create_repl_index(url, auth):
 	name = 'num_running_repl'
 	function =  'function(doc) {if(doc._id.indexOf("cloudant_bulk_replication") === 0 '
@@ -46,11 +46,11 @@ def create_repl_index(url, auth):
 
 
 
-# Accepts:	1) The view URL to monitor on the mediator,
-#			2) The authorization for the mediator,
-#			3) The limit for concurrent replications,
-#			4) Number of retries remaining (defaults to 5)
-# Returns:	True if more replications can be POSTed, False otherwise
+# Accepts:  1) The view URL to monitor on the mediator,
+#           2) The authorization for the mediator,
+#           3) The limit for concurrent replications,
+#           4) Number of retries remaining (defaults to 5)
+# Returns:  True if more replications can be POSTed, False otherwise
 def poll_replicator(url, auth, limit, retries=5):
 	# base case - we've run out of retries
 	if retries == 0:

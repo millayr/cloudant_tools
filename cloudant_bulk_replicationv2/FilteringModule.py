@@ -10,7 +10,7 @@ from ExceptionsModule import FilterError
 s = requests.Session()
 
 # Accepts:  1) The source URL (both the Cloudant account and db),
-#			2) The authorization header
+#           2) The authorization header
 # Returns:  Json object (Dictionary) representing the ddoc name and func name
 def create_filter_func(source, auth):
 	name = uuid.uuid1()

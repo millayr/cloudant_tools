@@ -107,10 +107,10 @@ options:
 '''
 
 
-# Accepts:	1) An array of dbs to process,
-#			2) An output queue for message passing,
-#			3) A failure queue for message passing
-# Returns:	Void
+# Accepts:  1) An array of dbs to process,
+#           2) An output queue for message passing,
+#           3) A failure queue for message passing
+# Returns:  Void
 def repl_dispatcher(dbs, running_repl_url, batch_id):
 	db_index = 0
 	num_failed_repl = num_failed_ddocs = 0
