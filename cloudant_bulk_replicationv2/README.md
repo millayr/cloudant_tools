@@ -1,9 +1,9 @@
 # Cloudant Bulk Replication Utility
 
-*To Run:*  
+###To Run:  
 `$ python BulkReplicationDriver.py -s <source account> -t <target account> [options]`
 
-*Additional Options:*
+###Additional Options:
 ```
 -m <mediator>  :  The Cloudant user to mediate the replications. This
                   allows for a third party account to perform the
@@ -61,3 +61,11 @@
 
 -h             :  Display this help message.
 ```
+
+##Other Links and Information:
+
+Cloudant *_replicate* API reference:  http://docs.cloudant.com/guides/replication/replication.html
+
+Cloudant *_replicator db* API reference:  http://docs.cloudant.com/guides/replication/replicator-database.html#replicator-database
+
+Replication Performance Tuning (thanks to Adam):  https://cloudant.fogbugz.com/f/cases/24388/
