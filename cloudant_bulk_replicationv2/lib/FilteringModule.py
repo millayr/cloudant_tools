@@ -8,13 +8,13 @@ import uuid
 from ExceptionsModule import FilterError
 
 s = requests.Session()
+name = 'filteringddoc'
+func = 'filteringfunc'
 
 # Accepts:  1) The source URL (both the Cloudant account and db),
 #           2) The authorization header
 # Returns:  Json object (Dictionary) representing the ddoc name and func name
 def create_filter_func(source, auth):
-	name = uuid.uuid1()
-	func = uuid.uuid1()
 
 	ddoc = {
 			'_id': '_design/{0}'.format(name),
@@ -28,9 +28,32 @@ def create_filter_func(source, auth):
 	r = s.post(source, data=json.dumps(ddoc),
 			headers={'content-type': 'application/json', 'Authorization': auth}).json()
 
-	# Handle potential errors
-	if 'error' in r:
+	# handle conflicts
+	if 'error' in r and r['error'] == 'conflict':
+		print 'The ddoc responsible for filtering ddocs already exists.  Skipping...'
+	elif 'error' in r:
 		print 'Failed creating a filtered replication ddoc for {0}!\n{1}'.format(source, json.dumps(response, indent=4))
 		raise FilterError('CREATE_FILTER_FUNC: Failed filter ddoc post for {0}!'.format(source), logging.ERROR, r)
 
 	return {'name': name, 'func': func}
+
+
+
+# Accepts:  1) The source URL (both the Cloudant account and db),
+#           2) The authorization header
+# Returns:  Void
+def remove_filter_func(source, auth):
+	# first read back the doc
+	url = '{0}/_design/{1}'.format(source, name)
+	r = s.get(url, headers={'Authorization': auth}).json()
+
+	if 'error' in r or '_rev' not in r:
+		print 'Failed to delete filtering ddoc for {0}'.format(source)
+		raise FilterError('REMOVE_FILTER_FUNC: Failed to delete filtering ddoc for {0}!'.format(source), logging.ERROR, r)
+
+	url += '?rev={0}'.format(r['_rev'])
+	r = s.delete(url, headers={'Authorization': auth}).json()
+
+	if 'error' in r:
+		print 'Failed to delete filtering ddoc for {0}'.format(source)
+		raise FilterError('REMOVE_FILTER_FUNC: Failed to delete filtering ddoc for {0}!'.format(source), logging.ERROR, r)

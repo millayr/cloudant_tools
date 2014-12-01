@@ -184,10 +184,29 @@ def repl_dispatcher(dbs, running_repl_url, batch_id):
 			logging.error('Unexpected error occured! Error: {0}'.format(sys.exc_info()))
 			sys.exit()
 
-	# wait for any remaining replications to finish
-	print '\nWaiting for any remaining replications to complete.\n'
-	while not mm.poll_replicator(running_repl_url, config['mediator_auth'], 1):
-		time.sleep(config['polling_delay'])
+	# wait for any remaining replications to finish if not continuous
+	if not config['continuous']:
+		print '\nWaiting for any remaining replications to complete.\n'
+		while not mm.poll_replicator(running_repl_url, config['mediator_auth'], 1):
+			time.sleep(config['polling_delay'])
+
+	# delete the filtering ddocs if they were created and if these replications are not continuous
+	if config['skip_ddocs'] and not config['continuous']:
+		print 'Deleting the ddocs used to filter the replications.\n'
+		db_index = 0
+		while db_index < len(dbs):
+			source_db = dbs[db_index]
+			try:
+				fm.remove_filter_func(config['source_url'] + source_db, config['source_auth'])
+				db_index += 1
+			except FilterError as fe:
+				logging.log(fe.level, '{0}\n{1}'.format(fe.msg, json.dumps(fe.r, indent=4)))
+				num_failed_ddocs += 1
+				db_index += 1
+			except:
+				print 'Unexpected Error!  View the log for details.'
+				logging.error('Unexpected error occured! Error: {0}'.format(sys.exc_info()))
+				sys.exit()
 
 	# place the number of failures in to the output queue
 	return [num_failed_repl, num_failed_ddocs]
