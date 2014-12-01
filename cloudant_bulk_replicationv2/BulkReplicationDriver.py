@@ -86,7 +86,7 @@ options:
 
    -o              :   Make all replications continuous.  Ensure the 
                        concurrency limit is high enough to support all 
-                       replications or disable the lmit all together.  
+                       replications or disable the limit all together.  
                        (Default is to use one-off replications)
 
    -w <#>          :   Set the number of worker processes per replication.
