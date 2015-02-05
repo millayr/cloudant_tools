@@ -4,8 +4,8 @@
 
 import json
 import requests
-import random
 import logging
+import time
 from ExceptionsModule import FatalError
 
 s = requests.Session()
@@ -63,7 +63,7 @@ def poll_replicator(url, auth, limit, retries=5):
 		print 'Failed to retrieve {0}.  Retrying...'.format(url)
 		retries -= 1
 		logging.warning('POLL_REPLICATOR: Failed to retrieve {0}.  {1} retries remaining.\n{2}'.format(url, retries, json.dumps(r, indent=4)))
-		time.sleep(random.randint(1, 4))
+		time.sleep(5)
 		return poll_replicator(url, auth, limit, retries)
 
 	repl_running =  0

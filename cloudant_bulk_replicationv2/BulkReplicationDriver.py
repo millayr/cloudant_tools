@@ -176,8 +176,7 @@ def repl_dispatcher(dbs, running_repl_url, batch_id):
 			num_failed_ddocs += 1
 			db_index += 1
 		except FatalError as xe:
-			logging.log(xe.level, '{0}\nAborting thread operations!!'.format(xe.msg))
-			failures.put([dbs, dbs[db_index]])
+			logging.log(xe.level, '{0}\nAborting script!!'.format(xe.msg))
 			sys.exit()
 		except:
 			print 'Unexpected Error!  View the log for details.'
