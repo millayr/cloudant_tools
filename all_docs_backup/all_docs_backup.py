@@ -3,8 +3,8 @@ import json
 import multiprocessing.dummy as multiprocessing
 import uuid
 
-account = 'millayr'
-pwd = 'SJ_class07'
+account = 'FILL ME IN'
+pwd = 'FILL ME IN'
 num_threads = 20
 
 s = requests.Session()
