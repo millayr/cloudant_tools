@@ -2,12 +2,13 @@ import requests
 import json
 import multiprocessing.dummy as multiprocessing
 import uuid
+import time
 
 account = 'rgrbackup2'
 user = 'adm-ryanmillay'
-pwd = 'VU_class11'
+pwd = 'FILL ME IN'
 num_threads = 20
-
+output_dir = './all_docs_output_{0}'.format(time.time())
 s = requests.Session()
 
 
@@ -23,7 +24,7 @@ def stream_all_docs(dbs):
 
 		r = s.get('https://{0}.cloudant.com/{1}/_all_docs?include_docs=true'.format(account, db), auth=(user, pwd), stream=True)
 			
-		with open("{0}.json".format(db), 'wb') as f:
+		with open("{0}/{1}.json".format(output_dir, db), 'wb') as f:
 			for chunk in r.iter_content(chunk_size=5000000):
 				if chunk:
 					f.write(chunk)
@@ -33,6 +34,9 @@ def stream_all_docs(dbs):
 
 
 def main():
+
+	if not os.path.exists(output_dir):
+		os.makedirs(output_dir)
 
 	dbs = s.get('https://{0}.cloudant.com/_all_dbs'.format(account), auth=(user, pwd)).json()
 	if '_replicator' in dbs:
