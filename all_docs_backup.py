@@ -1,30 +1,80 @@
 import requests
 import json
 import multiprocessing.dummy as multiprocessing
-import uuid
 import time
-
-account = 'rgrbackup2'
-user = 'adm-ryanmillay'
-pwd = 'FILL ME IN'
-num_threads = 20
-output_dir = './all_docs_output_{0}'.format(time.time())
-s = requests.Session()
+import os
+import sys
+import getopt
+import getpass
 
 
-def slice_array(array, size):
-	if size < 1:
-		size = 1
-	return [array[i:i + size] for i in range(0, len(array), size)]
+# configuration values
+config = dict(
+    accountname = '',
+    username = '',
+    password = '',
+    outputpath = './all_docs_output_{0}'.format(int(time.time())),
+    authheader = '',
+    num_threads = 20,
+    )
+
+usage = 'python ' + os.path.basename(__file__) + ' -a <accountname> [-u <username>]'
+
+def parse_args(argv):
+    # parse through the argument list and update the config dict as appropriate
+    try:
+        opts, args = getopt.getopt(argv, "hu:a:", ["help", "username=", "accountname="])
+    except getopt.GetoptError:
+        print usage
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print usage
+            sys.exit()
+        elif opt in ("-u", "--username"):
+            config['username'] = arg
+        elif opt in ("-a", "--accountname"):
+            config['accountname'] = arg
 
 
-def stream_all_docs(dbs):
-	for db in dbs:
-		
+def init_config():
+    if config['accountname'] == '':
+        print usage
+        sys.exit()
+    if config['username'] == '':
+        config['username'] = config['accountname']
+    
+    config['baseurl'] = 'https://{0}.cloudant.com/'.format(config['accountname'])
 
-		r = s.get('https://{0}.cloudant.com/{1}/_all_docs?include_docs=true'.format(account, db), auth=(user, pwd), stream=True)
+
+def get_password():
+    config['password'] = getpass.getpass('Password for {0}:'.format(config["username"]))
+
+
+def authenticate():
+    header = {'Content-type': 'application/x-www-form-urlencoded'}
+    url = config['baseurl'] + '_session'
+    data = dict(name=config['username'],
+                password=config['password'])
+    response = requests.post(url, data = data, headers = header)
+    if 'error' in response.json():
+        if response.json()['error'] == 'forbidden':
+            print response.json()['reason']
+            sys.exit()
+    config['authheader'] = {'Cookie': response.headers['set-cookie']}
+
+
+def stream_all_docs(queue):
+	s = requests.Session()
+	while True:
+		db = queue.get()
+		if db is None:
+			print 'End of database list reached.  Thread exiting...'
+			break
+
+		r = s.get('{0}{1}/_all_docs?include_docs=true'.format(config['baseurl'], db), headers=config['authheader'], stream=True)
 			
-		with open("{0}/{1}.json".format(output_dir, db), 'wb') as f:
+		with open("{0}/{1}.json".format(config['outputpath'], db), 'wb') as f:
 			for chunk in r.iter_content(chunk_size=5000000):
 				if chunk:
 					f.write(chunk)
@@ -33,26 +83,32 @@ def stream_all_docs(dbs):
 		print 'Saved {0}...'.format(db)
 
 
-def main():
+def main(argv):
+    parse_args(argv)
+    init_config()
+    get_password()
+    authenticate()
 
-	if not os.path.exists(output_dir):
-		os.makedirs(output_dir)
+    if not os.path.exists(config['outputpath']):
+        os.makedirs(config['outputpath'])
 
-	dbs = s.get('https://{0}.cloudant.com/_all_dbs'.format(account), auth=(user, pwd)).json()
-	if '_replicator' in dbs:
-		dbs.remove('_replicator')
+    dbs = requests.get('{0}_all_dbs'.format(config['baseurl']), headers=config['authheader']).json()
+    if '_replicator' in dbs:
+        dbs.remove('_replicator')
 
-	range_size = len(dbs) // num_threads
-	db_chunks = slice_array(dbs, range_size)
+    q = multiprocessing.Queue()
+    for db in dbs:
+        q.put(db)
 
-	threads = []
-	for chunk in db_chunks:
-		t = multiprocessing.Process(target=stream_all_docs, args=(chunk,))
-		threads.append(t)
-		t.start()
+    threads = []
+    for i in range(config['num_threads']):
+        t = multiprocessing.Process(target=stream_all_docs, args=(q,))
+        threads.append(t)
+        t.start()
+        q.put(None)
 
-	for t in threads:
-		t.join()
+    for t in threads:
+        t.join()
 
 if __name__ == "__main__":
-	main()
+	main(sys.argv[1:])
