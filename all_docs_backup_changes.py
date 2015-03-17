@@ -116,7 +116,7 @@ def get_dbs():
 
         for db_object in seq_obj['results']:
             db = db_object['dbname']
-            if db not in ['_replicator','metrics','dbs', 'cms'] and db not in unique:
+            if db not in ['_replicator','metrics','dbs'] and db not in unique:
                 unique.add(db)
                 q.put(db)
 
@@ -132,7 +132,7 @@ def get_dbs():
         # now we grab all the databases in the account.
         dbs = requests.get('{0}_all_dbs'.format(config['baseurl']), headers=config['authheader']).json()
         for db in dbs:
-            if db not in ['_replicator', 'metrics', 'dbs', 'cms']:
+            if db not in ['_replicator', 'metrics', 'dbs']:
                 q.put(db)
 
     # return the queue of databses
