@@ -18,15 +18,16 @@ config = dict(
     tmpcheckpointpath = '.db_changes_checkpoint.tmp',
     authheader = '',
     num_threads = 20,
-    baseurl = ''
+    baseurl = '',
+    incremental = False
     )
 
-usage = 'python ' + os.path.basename(__file__) + ' -a <accountname> [-u <username>] [-b <base url>]'
+usage = 'python ' + os.path.basename(__file__) + ' -a <accountname> [-u <username>] [-b <base url>] [-i]'
 
 def parse_args(argv):
     # parse through the argument list and update the config dict as appropriate
     try:
-        opts, args = getopt.getopt(argv, "hu:a:b:", ["help", "username=", "accountname=", "url="])
+        opts, args = getopt.getopt(argv, "hu:a:b:i", ["help", "username=", "accountname=", "url=", "incremental"])
     except getopt.GetoptError:
         print usage
         sys.exit(2)
@@ -40,6 +41,8 @@ def parse_args(argv):
             config['accountname'] = arg
         elif opt in ("-b", "--url"):
             config['baseurl'] = arg
+        elif opt in ("-i", "--incremental"):
+            config['incremental'] = True
 
 
 def init_config():
@@ -81,34 +84,59 @@ def stream_all_docs(queue):
         if db is None:
             break
 
-        r = s.get('{0}{1}/_changes?include_docs=true'.format(config['baseurl'], db), headers=config['authheader'], stream=True)
+        r = s.get('{0}{1}/_all_docs?include_docs=true'.format(config['baseurl'], db), headers=config['authheader'], stream=True)
 
-        with open("{0}/{1}.json".format(config['outputpath'], db), 'wb') as f:
-			for chunk in r.iter_content(chunk_size=5000000):
-				if chunk:
-					f.write(chunk)
-					f.flush()
+        if r.status_code == 200:
+            with open("{0}/{1}.json".format(config['outputpath'], db), 'wb') as f:
+    			for chunk in r.iter_content(chunk_size=5000000):
+    				if chunk:
+    					f.write(chunk)
+    					f.flush()
 
-        print 'Saved {0}...'.format(db)
+            print 'Saved {0}...'.format(db)
 
 
-def write_checkpoint(db_changes):
+def write_checkpoint(seq_obj):
     checkpoint_file = open(config['tmpcheckpointpath'], 'w')
-    checkpoint_file.write(json.dumps(db_changes['last_seq']))
+    checkpoint_file.write(json.dumps(seq_obj['last_seq']))
     checkpoint_file.close()
 
 
-def get_changed_dbs():
+def get_dbs():
+    q = multiprocessing.Queue()
+    unique = set()
+
     # if a checkpoint exists, run _db_updates with since parameter, otherwise just run _db_updates
-    if os.path.exists(config['checkpointpath']):
-        # print "the checkpoint file exists!!!"
+    if config['incremental'] and os.path.exists(config['checkpointpath']):
         f = open(config['checkpointpath'], 'r')
         checkpoint_seq = f.read()
-        db_changes = requests.get('{0}_db_updates?since={1}'.format(config['baseurl'], checkpoint_seq), headers=config['authheader']).json()
-    else:
-        db_changes = requests.get('{0}_db_updates'.format(config['baseurl']), headers=config['authheader']).json()
+        seq_obj = requests.get('{0}_db_updates?since={1}'.format(config['baseurl'], checkpoint_seq), headers=config['authheader']).json()
+        # write the latest checkpoint
+        write_checkpoint(seq_obj)
 
-    return db_changes
+        for db_object in seq_obj['results']:
+            db = db_object['dbname']
+            if db not in ['_replicator','metrics','dbs', 'cms'] and db not in unique:
+                unique.add(db)
+                q.put(db)
+
+    else:
+        # we need to get the latest sequence number to prepare for future incrementals
+        r = requests.get('{0}_db_updates?limit=0&descending=true'.format(config['baseurl']), headers=config['authheader'])
+        if r.status_code != 200:
+            print 'Warning:  Failed to retrieve a sequence number.  Please ensure the global changes feed is enabled.'
+        else:
+            # write the latest checkpoint
+            write_checkpoint(r.json())
+
+        # now we grab all the databases in the account.
+        dbs = requests.get('{0}_all_dbs'.format(config['baseurl']), headers=config['authheader']).json()
+        for db in dbs:
+            if db not in ['_replicator', 'metrics', 'dbs', 'cms']:
+                q.put(db)
+
+    # return the queue of databses
+    return q
 
 
 def remove_tmp_checkpoint():
@@ -117,7 +145,8 @@ def remove_tmp_checkpoint():
 
 
 def rename_checkpoint_file():
-    os.rename(config['tmpcheckpointpath'], config['checkpointpath'])
+    if os.path.exists(config['tmpcheckpointpath']):
+        os.rename(config['tmpcheckpointpath'], config['checkpointpath'])
 
 
 def main(argv):
@@ -130,20 +159,10 @@ def main(argv):
     if not os.path.exists(config['outputpath']):
         os.makedirs(config['outputpath'])
 
-    # get updated databases
-    db_changes = get_changed_dbs()
+    # get databases slated for backup
+    q = get_dbs()
 
-    # save the latest checkpoint to .db_changes_checkpoint file prior to processing
-    write_checkpoint(db_changes)
-
-    q = multiprocessing.Queue()
-    unique = set()
-    for db_object in db_changes['results']:
-        db = db_object['dbname']
-        if db not in ['_replicator','metrics','dbs'] and db not in unique:
-            unique.add(db)
-            q.put(db)
-
+    # break up the processing across multiple threads
     threads = []
     for i in range(config['num_threads']):
         t = multiprocessing.Process(target=stream_all_docs, args=(q,))
