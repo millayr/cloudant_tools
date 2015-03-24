@@ -4,6 +4,7 @@ import getopt
 import getpass
 import base64
 import json
+import time
 import requests
 import fileinput
 import multiprocessing.dummy as multiprocessing
@@ -93,29 +94,70 @@ def authenticate():
     config['authheader'] = {'Cookie': response.headers['set-cookie']}
 
 
-def initialize_db(dbname, session):
-    r = session.put('{0}{1}'.format(config['baseurl'], dbname), headers = config['authheader'])
-    if r.status_code != 201:
-        print 'The database "{0}" was not created!'.format(dbname)
-        sys.exit()
+def initialize_db(dbname, session, retries=5):
+    retries -= 1
+    try:
+        if retries >= 0:
+            r = session.put('{0}{1}'.format(config['baseurl'], dbname), headers = config['authheader'])
+            if r.status_code != 201:
+                print 'The database "{0}" was not created!  Retrying.'.format(dbname)
+                print json.dumps(r.json(), indent=4)
+                time.sleep(5)
+                initialize_db(dbname, session, retries)
+        else:
+            print 'initialize_db:  Error! Retries exceeded.  Failed to create database "{0}".'.format(dbname)
+            sys.exit()
+    except:
+        print 'initialize_db:  Warning!  Database creation failed.  Retrying.'
+        time.sleep(5)
+        initialize_db(dbname, session, retries)
 
 
-def delete_db(dbname, session):
-    r = session.delete('{0}{1}'.format(config['baseurl'], dbname), headers = config['authheader'])
-    if r.status_code != 200:
-        print 'Failed to delete database "{0}"!'.format(dbname)
+def delete_db(dbname, session, retries=5):
+    retries -= 1
+    try:
+        if retries >= 0:
+            r = session.delete('{0}{1}'.format(config['baseurl'], dbname), headers = config['authheader'])
+            if r.status_code != 200:
+                print 'Failed to delete database "{0}"! Retrying'.format(dbname)
+                print json.dumps(r.json(), indent=4)
+                time.sleep(5)
+                delete_db(dbname, session, retries)
+        else:
+            print 'delete_db:  Error! Retries exceeded.  Failed to delete database "{0}".'.format(dbname)
+            sys.exit()
+    except:
+        print 'delete_db:  Warning!  Database deletion failed.  Retrying.'
+        time.sleep(5)
+        delete_db(dbname, session, retries)
 
 
-def updatedb(dbname, requestdata, session):
-    headers = config['authheader']
-    headers.update({'Content-type': 'application/json'})
-    r = session.post(
-        '{0}{1}/_bulk_docs'.format(config['baseurl'], dbname),
-        headers = headers,
-        data = json.dumps(requestdata)
-        )
-    if len(r.json()) > 0:
-        print json.dumps(r.json(), indent=4)
+def updatedb(dbname, requestdata, session, retries=5):
+    retries -= 1
+    try:
+        if retries >= 0:
+            headers = config['authheader']
+            headers.update({'Content-type': 'application/json'})
+            r = session.post(
+                '{0}{1}/_bulk_docs'.format(config['baseurl'], dbname),
+                headers = headers,
+                data = json.dumps(requestdata)
+                )
+            if r.status_code != 201 and r.status_code != 202:
+                print 'Failed to post bulk update for database "{0}"!  Retrying.'.format(dbname)
+                print json.dumps(r.json(), indent=4)
+                time.sleep(5)
+                updatedb(dbname, requestdata, session, retries)
+
+            if len(r.json()) > 0:
+                print json.dumps(r.json(), indent=4)
+        else:
+            print 'updatedb:  Error! Retries exceeded.  Failed to update database "{0}".'.format(dbname)
+            sys.exit()
+    except:
+        print 'updatedb:  Warning!  Bulk update failed.  Retrying.'
+        time.sleep(5)
+        updatedb(dbname, requestdata, session, retries)
 
 
 def upload(filename, dbname, session):
