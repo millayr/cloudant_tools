@@ -106,7 +106,7 @@ def initialize_db(dbname, session, retries=5):
                 initialize_db(dbname, session, retries)
         else:
             print 'initialize_db:  Error! Retries exceeded.  Failed to create database "{0}".'.format(dbname)
-            sys.exit()
+            return
     except:
         print 'initialize_db:  Warning!  Database creation failed.  Retrying.'
         time.sleep(5)
@@ -125,7 +125,7 @@ def delete_db(dbname, session, retries=5):
                 delete_db(dbname, session, retries)
         else:
             print 'delete_db:  Error! Retries exceeded.  Failed to delete database "{0}".'.format(dbname)
-            sys.exit()
+            return
     except:
         print 'delete_db:  Warning!  Database deletion failed.  Retrying.'
         time.sleep(5)
@@ -153,7 +153,7 @@ def updatedb(dbname, requestdata, session, retries=5):
                 print json.dumps(r.json(), indent=4)
         else:
             print 'updatedb:  Error! Retries exceeded.  Failed to update database "{0}".'.format(dbname)
-            sys.exit()
+            return
     except:
         print 'updatedb:  Warning!  Bulk update failed.  Retrying.'
         time.sleep(5)
