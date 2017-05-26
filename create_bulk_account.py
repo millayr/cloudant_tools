@@ -5,8 +5,8 @@ import uuid
 
 num_dbs = 20
 num_docs = 5000
-account = 'millayr-bulk'
-pwd = 'SJ_class07'
+account = 'FILL ME IN'
+pwd = 'FILL ME IN'
 num_threads = 5
 s = requests.Session()
 
